@@ -84,7 +84,7 @@ public class CsvExportServiceImpl implements CsvExportService {
             int totalHoliday = records.stream().mapToInt(r -> r.getHolidayWorkMinutes() != null ? r.getHolidayWorkMinutes() : 0).sum();
 
             sb.append(user.getId().toString().substring(0, 8)).append(",");
-            sb.append(user.getName()).append(",");
+            sb.append(escapeCsv(user.getName())).append(",");
             sb.append(user.getPrimaryDepartmentId() != null ? user.getPrimaryDepartmentId().toString().substring(0, 8) : "").append(",");
             sb.append(workDays).append(",");
             sb.append(formatMinutes(totalWork)).append(",");
@@ -110,8 +110,8 @@ public class CsvExportServiceImpl implements CsvExportService {
 
         for (var user : users) {
             sb.append(user.getId().toString().substring(0, 8)).append(",");
-            sb.append(user.getName()).append(",");
-            sb.append(user.getEmail()).append(",");
+            sb.append(escapeCsv(user.getName())).append(",");
+            sb.append(escapeCsv(user.getEmail())).append(",");
             sb.append(user.getRole()).append(",");
             sb.append(user.getPrimaryDepartmentId() != null ? user.getPrimaryDepartmentId().toString().substring(0, 8) : "").append(",");
             sb.append(user.getActive() ? "有効" : "無効").append(",");
@@ -159,6 +159,15 @@ public class CsvExportServiceImpl implements CsvExportService {
     private String formatMinutes(Integer minutes) {
         if (minutes == null || minutes == 0) return "0:00";
         return (minutes / 60) + ":" + String.format("%02d", minutes % 60);
+    }
+
+    private String escapeCsv(String value) {
+        if (value == null) return "";
+        if (value.contains(",") || value.contains("\"") || value.contains("\n") ||
+                value.startsWith("=") || value.startsWith("+") || value.startsWith("-") || value.startsWith("@")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
     }
 
     private byte[] addBom(String content) {

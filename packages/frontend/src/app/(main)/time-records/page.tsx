@@ -5,19 +5,23 @@ import { apiClient } from '@/lib/api-client';
 import { TimeRecordTable } from '@/components/time-records/TimeRecordTable';
 import { TimeRecordResponse } from '@/types/clock';
 
-const TEMP_USER_ID = '00000000-0000-0000-0000-000000000010';
-
 export default function TimeRecordsPage() {
   const [records, setRecords] = useState<TimeRecordResponse[]>([]);
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth() + 1);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setUserId(localStorage.getItem('userId'));
+  }, []);
 
   const fetchRecords = useCallback(async () => {
+    if (!userId) return;
     const data = await apiClient<TimeRecordResponse[]>(
-      `/time-records?userId=${TEMP_USER_ID}&year=${year}&month=${month}`
+      `/time-records?userId=${userId}&year=${year}&month=${month}`
     );
     setRecords(data);
-  }, [year, month]);
+  }, [userId, year, month]);
 
   useEffect(() => {
     fetchRecords();
