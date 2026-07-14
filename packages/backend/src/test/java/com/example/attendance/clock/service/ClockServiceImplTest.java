@@ -1,5 +1,6 @@
 package com.example.attendance.clock.service;
 
+import com.example.attendance.application.service.OvertimeAlertService;
 import com.example.attendance.clock.entity.TimeRecord;
 import com.example.attendance.clock.repository.TimeEntryRepository;
 import com.example.attendance.clock.repository.TimeRecordRepository;
@@ -35,6 +36,9 @@ class ClockServiceImplTest {
     @Mock
     private CalendarService calendarService;
 
+    @Mock
+    private OvertimeAlertService overtimeAlertService;
+
     private ClockServiceImpl clockService;
 
     private static final UUID USER_ID = UUID.randomUUID();
@@ -42,7 +46,7 @@ class ClockServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        clockService = new ClockServiceImpl(timeRecordRepository, timeEntryRepository, calendarService);
+        clockService = new ClockServiceImpl(timeRecordRepository, timeEntryRepository, calendarService, overtimeAlertService);
     }
 
     @Test

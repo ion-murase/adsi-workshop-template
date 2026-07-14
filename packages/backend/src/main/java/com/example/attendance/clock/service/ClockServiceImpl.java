@@ -1,5 +1,6 @@
 package com.example.attendance.clock.service;
 
+import com.example.attendance.application.service.OvertimeAlertService;
 import com.example.attendance.clock.dto.ClockStatusResponse;
 import com.example.attendance.clock.dto.MonthlySummaryResponse;
 import com.example.attendance.clock.dto.TimeRecordResponse;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -28,13 +30,16 @@ public class ClockServiceImpl implements ClockService {
     private final TimeRecordRepository timeRecordRepository;
     private final TimeEntryRepository timeEntryRepository;
     private final CalendarService calendarService;
+    private final OvertimeAlertService overtimeAlertService;
 
     public ClockServiceImpl(TimeRecordRepository timeRecordRepository,
                             TimeEntryRepository timeEntryRepository,
-                            CalendarService calendarService) {
+                            CalendarService calendarService,
+                            OvertimeAlertService overtimeAlertService) {
         this.timeRecordRepository = timeRecordRepository;
         this.timeEntryRepository = timeEntryRepository;
         this.calendarService = calendarService;
+        this.overtimeAlertService = overtimeAlertService;
     }
 
     @Override
@@ -83,6 +88,9 @@ public class ClockServiceImpl implements ClockService {
         record.setHolidayWorkMinutes(result.holidayWorkMinutes());
 
         var saved = timeRecordRepository.save(record);
+
+        overtimeAlertService.checkAndNotify(userId, YearMonth.from(today));
+
         return TimeRecordResponse.from(saved);
     }
 
