@@ -32,6 +32,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/clock/**").permitAll()
                         .requestMatchers("/api/time-records/**").permitAll()
                         .requestMatchers("/api/calendar/**").permitAll()
+                        .requestMatchers("/api/notifications/**").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/api/users/me").authenticated()
