@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { NotificationBadge } from '@/components/notifications/NotificationBadge';
 import { UnreadCountResponse } from '@/types/notification';
@@ -19,9 +19,19 @@ const NAV_ITEMS = [
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setIsAuthenticated(false);
+      router.push('/login');
+      return;
+    }
+    setIsAuthenticated(true);
+
     const userId = localStorage.getItem('userId');
     if (!userId) return;
 
@@ -34,7 +44,18 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     fetchCount();
     const interval = setInterval(fetchCount, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [router]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('user');
+    router.push('/login');
+  };
+
+  if (isAuthenticated === null || isAuthenticated === false) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen">
@@ -59,6 +80,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   )}
                 </Link>
               ))}
+              <button
+                onClick={handleLogout}
+                className="text-sm text-gray-500 hover:text-red-600 ml-2"
+              >
+                ログアウト
+              </button>
             </div>
           </div>
         </div>

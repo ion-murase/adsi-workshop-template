@@ -7,27 +7,33 @@ import { TodayRecord } from '@/components/clock/TodayRecord';
 import { MonthSummaryCard } from '@/components/clock/MonthSummaryCard';
 import { ClockStatusResponse, MonthlySummaryResponse } from '@/types/clock';
 
-const TEMP_USER_ID = '00000000-0000-0000-0000-000000000010';
-
 export default function DashboardPage() {
   const [status, setStatus] = useState<ClockStatusResponse | null>(null);
   const [summary, setSummary] = useState<MonthlySummaryResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const id = localStorage.getItem('userId');
+    setUserId(id);
+  }, []);
 
   const fetchStatus = useCallback(async () => {
+    if (!userId) return;
     const data = await apiClient<ClockStatusResponse>(
-      `/clock/status?userId=${TEMP_USER_ID}`
+      `/clock/status?userId=${userId}`
     );
     setStatus(data);
-  }, []);
+  }, [userId]);
 
   const fetchSummary = useCallback(async () => {
+    if (!userId) return;
     const now = new Date();
     const data = await apiClient<MonthlySummaryResponse>(
-      `/time-records/summary?userId=${TEMP_USER_ID}&year=${now.getFullYear()}&month=${now.getMonth() + 1}`
+      `/time-records/summary?userId=${userId}&year=${now.getFullYear()}&month=${now.getMonth() + 1}`
     );
     setSummary(data);
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     fetchStatus();
@@ -35,9 +41,10 @@ export default function DashboardPage() {
   }, [fetchStatus, fetchSummary]);
 
   const handleClock = async (action: string) => {
+    if (!userId) return;
     setIsLoading(true);
     try {
-      await apiClient(`/clock/${action}?userId=${TEMP_USER_ID}`, { method: 'POST' });
+      await apiClient(`/clock/${action}?userId=${userId}`, { method: 'POST' });
       await fetchStatus();
       await fetchSummary();
     } finally {
