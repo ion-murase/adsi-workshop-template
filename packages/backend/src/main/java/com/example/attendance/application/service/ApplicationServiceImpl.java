@@ -106,6 +106,7 @@ public class ApplicationServiceImpl implements ApplicationService {
 
         var approver = userRepository.findById(approverId)
                 .orElseThrow(() -> new BusinessException("承認者が見つかりません", HttpStatus.NOT_FOUND));
+        validateApproverRole(approver);
 
         application.approve(approverId);
 
@@ -134,6 +135,7 @@ public class ApplicationServiceImpl implements ApplicationService {
 
         var approver = userRepository.findById(approverId)
                 .orElseThrow(() -> new BusinessException("承認者が見つかりません", HttpStatus.NOT_FOUND));
+        validateApproverRole(approver);
 
         application.reject(approverId, comment);
         applicationRepository.save(application);
@@ -275,6 +277,12 @@ public class ApplicationServiceImpl implements ApplicationService {
                         "新しい申請が届きました",
                         applicant.getName() + "さんから打刻修正申請が届きました",
                         application.getId()));
+    }
+
+    private void validateApproverRole(User user) {
+        if (user.getRole() != Role.APPROVER && user.getRole() != Role.ADMIN) {
+            throw new BusinessException("承認権限がありません", HttpStatus.FORBIDDEN);
+        }
     }
 
     private void validatePending(Application application) {

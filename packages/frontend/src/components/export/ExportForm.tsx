@@ -14,12 +14,14 @@ export default function ExportForm() {
   const [exportType, setExportType] = useState('time-records');
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
+  const [error, setError] = useState('');
 
   const needsDateParams = exportType !== 'users';
 
   const handleDownload = () => {
     const token = localStorage.getItem('token');
     if (!token) return;
+    setError('');
 
     let url: string;
     if (exportType === 'users') {
@@ -28,22 +30,30 @@ export default function ExportForm() {
       url = withBasePath(`/api/export/${exportType}?year=${year}&month=${month}`);
     }
 
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', '');
-
     fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-      .then(res => res.blob())
+      .then(res => {
+        if (!res.ok) throw new Error('エクスポートに失敗しました');
+        return res.blob();
+      })
       .then(blob => {
         const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
         link.href = blobUrl;
+        link.setAttribute('download', '');
         link.click();
         URL.revokeObjectURL(blobUrl);
-      });
+      })
+      .catch(() => setError('エクスポートに失敗しました'));
   };
 
   return (
     <div className="space-y-6 max-w-lg">
+      {error && (
+        <div className="rounded-md bg-red-50 p-4" role="alert">
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
+
       <div>
         <label htmlFor="exportType" className="block text-sm font-medium text-gray-700">
           エクスポート対象

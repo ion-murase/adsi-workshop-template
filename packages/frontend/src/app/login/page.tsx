@@ -21,6 +21,7 @@ export default function LoginPage() {
         skipAuth: true,
       });
       localStorage.setItem('token', response.token);
+      localStorage.setItem('userId', response.userId);
       localStorage.setItem('user', JSON.stringify(response));
 
       if (response.requirePasswordChange) {
