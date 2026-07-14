@@ -19,4 +19,6 @@ public interface NotificationService {
     void markAsRead(UUID notificationId, UUID recipientId);
 
     void markAllAsRead(UUID recipientId);
+
+    boolean existsForCurrentMonth(UUID recipientId, NotificationType type, int year, int month);
 }

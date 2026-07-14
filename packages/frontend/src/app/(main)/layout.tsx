@@ -11,6 +11,8 @@ const NAV_ITEMS = [
   { href: '/', label: 'ダッシュボード' },
   { href: '/time-records', label: '勤務履歴' },
   { href: '/notifications', label: '通知' },
+  { href: '/applications', label: '申請' },
+  { href: '/approvals', label: '承認' },
   { href: '/admin/calendar', label: 'カレンダー' },
 ];
 

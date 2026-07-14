@@ -8,9 +8,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.ZonedDateTime;
@@ -18,10 +16,8 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "notifications")
-@Data
-@Builder
+@Getter
 @NoArgsConstructor
-@AllArgsConstructor
 public class Notification {
 
     @Id
@@ -45,18 +41,27 @@ public class Notification {
     private UUID referenceId;
 
     @Column(name = "is_read", nullable = false)
-    private boolean isRead;
+    private boolean read;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private ZonedDateTime createdAt;
 
+    public Notification(UUID recipientId, NotificationType type, String title, String message, UUID referenceId) {
+        this.id = UUID.randomUUID();
+        this.recipientId = recipientId;
+        this.type = type;
+        this.title = title;
+        this.message = message;
+        this.referenceId = referenceId;
+        this.read = false;
+    }
+
     @PrePersist
     protected void onCreate() {
-        if (this.id == null) {
-            this.id = UUID.randomUUID();
-        }
-        if (this.createdAt == null) {
-            this.createdAt = ZonedDateTime.now();
-        }
+        this.createdAt = ZonedDateTime.now();
+    }
+
+    public void markAsRead() {
+        this.read = true;
     }
 }

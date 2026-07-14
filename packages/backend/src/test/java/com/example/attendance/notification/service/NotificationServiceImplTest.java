@@ -11,7 +11,6 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
-import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -60,7 +59,7 @@ class NotificationServiceImplTest {
     @Test
     @DisplayName("getNotifications: ページネーション付き一覧を返す")
     void getNotifications_returnsPagedList() {
-        var notification = createNotification(false);
+        var notification = createNotification();
         var page = new PageImpl<>(List.of(notification), PageRequest.of(0, 10), 1);
         when(repository.findByRecipientIdOrderByCreatedAtDesc(RECIPIENT_ID, PageRequest.of(0, 10)))
                 .thenReturn(page);
@@ -74,9 +73,9 @@ class NotificationServiceImplTest {
     @Test
     @DisplayName("getNotifications: 未読のみフィルタ")
     void getNotifications_unreadOnlyFilter() {
-        var notification = createNotification(false);
+        var notification = createNotification();
         var page = new PageImpl<>(List.of(notification), PageRequest.of(0, 10), 1);
-        when(repository.findByRecipientIdAndIsReadFalseOrderByCreatedAtDesc(RECIPIENT_ID, PageRequest.of(0, 10)))
+        when(repository.findByRecipientIdAndReadFalseOrderByCreatedAtDesc(RECIPIENT_ID, PageRequest.of(0, 10)))
                 .thenReturn(page);
 
         var result = service.getNotifications(RECIPIENT_ID, true, PageRequest.of(0, 10));
@@ -88,7 +87,7 @@ class NotificationServiceImplTest {
     @Test
     @DisplayName("getUnreadCount: 未読件数を返す")
     void getUnreadCount_returnsCount() {
-        when(repository.countByRecipientIdAndIsReadFalse(RECIPIENT_ID)).thenReturn(5L);
+        when(repository.countByRecipientIdAndReadFalse(RECIPIENT_ID)).thenReturn(5L);
 
         var result = service.getUnreadCount(RECIPIENT_ID);
 
@@ -98,8 +97,7 @@ class NotificationServiceImplTest {
     @Test
     @DisplayName("markAsRead: 既読化できる")
     void markAsRead_marksAsRead() {
-        var notification = createNotification(false);
-        notification.setRecipientId(RECIPIENT_ID);
+        var notification = createNotification();
         when(repository.findById(notification.getId())).thenReturn(Optional.of(notification));
         when(repository.save(any(Notification.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -112,8 +110,7 @@ class NotificationServiceImplTest {
     @Test
     @DisplayName("markAsRead: 他人の通知は既読にできない")
     void markAsRead_otherRecipient_throwsException() {
-        var notification = createNotification(false);
-        notification.setRecipientId(RECIPIENT_ID);
+        var notification = createNotification();
         when(repository.findById(notification.getId())).thenReturn(Optional.of(notification));
 
         assertThatThrownBy(() -> service.markAsRead(notification.getId(), OTHER_USER_ID))
@@ -130,16 +127,13 @@ class NotificationServiceImplTest {
         verify(repository).markAllAsReadByRecipientId(RECIPIENT_ID);
     }
 
-    private Notification createNotification(boolean read) {
-        return Notification.builder()
-                .id(UUID.randomUUID())
-                .recipientId(RECIPIENT_ID)
-                .type(NotificationType.APPLICATION_APPROVED)
-                .title("テスト通知")
-                .message("テストメッセージ")
-                .referenceId(UUID.randomUUID())
-                .isRead(read)
-                .createdAt(ZonedDateTime.now())
-                .build();
+    private Notification createNotification() {
+        return new Notification(
+                RECIPIENT_ID,
+                NotificationType.APPLICATION_APPROVED,
+                "テスト通知",
+                "テストメッセージ",
+                UUID.randomUUID()
+        );
     }
 }

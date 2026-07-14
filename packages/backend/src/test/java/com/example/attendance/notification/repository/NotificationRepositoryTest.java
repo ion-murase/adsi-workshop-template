@@ -46,9 +46,9 @@ class NotificationRepositoryTest {
     }
 
     @Test
-    @DisplayName("findByRecipientIdAndIsReadFalse: 未読のみ取得")
-    void findByRecipientIdAndIsReadFalse_returnsUnreadOnly() {
-        var page = notificationRepository.findByRecipientIdAndIsReadFalseOrderByCreatedAtDesc(
+    @DisplayName("findByRecipientIdAndReadFalse: 未読のみ取得")
+    void findByRecipientIdAndReadFalse_returnsUnreadOnly() {
+        var page = notificationRepository.findByRecipientIdAndReadFalseOrderByCreatedAtDesc(
                 RECIPIENT_ID, PageRequest.of(0, 10));
 
         assertThat(page.getTotalElements()).isEqualTo(2);
@@ -56,9 +56,9 @@ class NotificationRepositoryTest {
     }
 
     @Test
-    @DisplayName("countByRecipientIdAndIsReadFalse: 未読件数を返す")
-    void countByRecipientIdAndIsReadFalse_returnsCount() {
-        var count = notificationRepository.countByRecipientIdAndIsReadFalse(RECIPIENT_ID);
+    @DisplayName("countByRecipientIdAndReadFalse: 未読件数を返す")
+    void countByRecipientIdAndReadFalse_returnsCount() {
+        var count = notificationRepository.countByRecipientIdAndReadFalse(RECIPIENT_ID);
         assertThat(count).isEqualTo(2);
     }
 }
