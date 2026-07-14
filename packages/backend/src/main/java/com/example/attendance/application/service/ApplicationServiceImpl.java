@@ -28,7 +28,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -188,10 +191,19 @@ public class ApplicationServiceImpl implements ApplicationService {
                 .orElseThrow(() -> new BusinessException("承認者が見つかりません", HttpStatus.NOT_FOUND));
 
         var page = applicationRepository.findPendingByDepartment(approver.getPrimaryDepartmentId(), pageable);
-        return page.map(app -> {
-            var applicantName = getUserName(app.getApplicantId());
-            return ApplicationResponse.from(app, applicantName);
-        });
+
+        List<UUID> applicantIds = page.getContent().stream()
+                .map(Application::getApplicantId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        Map<UUID, String> nameMap = applicationRepository.findUserNamesByIds(applicantIds).stream()
+                .collect(Collectors.toMap(
+                        row -> (UUID) row[0],
+                        row -> (String) row[1]
+                ));
+
+        return page.map(app -> ApplicationResponse.from(app, nameMap.getOrDefault(app.getApplicantId(), "不明")));
     }
 
     private void validateDeadline(LocalDate targetDate) {
