@@ -53,6 +53,9 @@ public class Application extends BaseEntity {
     @OneToOne(mappedBy = "application", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private ClockFixDetail clockFixDetail;
 
+    @OneToOne(mappedBy = "application", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private LeaveRequestDetail leaveRequestDetail;
+
     public Application(UUID applicantId, ApplicationType type) {
         this.applicantId = applicantId;
         this.type = type;
@@ -80,5 +83,9 @@ public class Application extends BaseEntity {
 
     public void setClockFixDetail(ClockFixDetail detail) {
         this.clockFixDetail = detail;
+    }
+
+    public void setLeaveRequestDetail(LeaveRequestDetail detail) {
+        this.leaveRequestDetail = detail;
     }
 }

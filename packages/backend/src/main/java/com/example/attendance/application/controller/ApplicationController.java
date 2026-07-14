@@ -2,6 +2,7 @@ package com.example.attendance.application.controller;
 
 import com.example.attendance.application.dto.ApplicationResponse;
 import com.example.attendance.application.dto.ClockFixRequest;
+import com.example.attendance.application.dto.LeaveRequest;
 import com.example.attendance.application.dto.RejectRequest;
 import com.example.attendance.application.service.ApplicationService;
 import com.example.attendance.infrastructure.security.JwtTokenProvider;
@@ -39,6 +40,15 @@ public class ApplicationController {
             @Valid @RequestBody ClockFixRequest request) {
         var userId = extractUserId(authHeader);
         var response = applicationService.submitClockFix(userId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/leave")
+    public ResponseEntity<ApplicationResponse> submitLeaveRequest(
+            @RequestHeader("Authorization") String authHeader,
+            @Valid @RequestBody LeaveRequest request) {
+        var userId = extractUserId(authHeader);
+        var response = applicationService.submitLeaveRequest(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
