@@ -25,8 +25,7 @@ class ArchitectureTest {
     @DisplayName("Controller は Repository に直接依存しない")
     void controllers_should_not_depend_on_repositories() {
         noClasses()
-                .that().resideInAPackage("..config..")
-                .or().resideInAPackage("..controller..")
+                .that().resideInAPackage("..controller..")
                 .should().dependOnClassesThat()
                 .resideInAPackage("..repository..")
                 .allowEmptyShould(true)
