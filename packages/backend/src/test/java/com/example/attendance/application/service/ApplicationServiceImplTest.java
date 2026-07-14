@@ -56,6 +56,8 @@ class ApplicationServiceImplTest {
     private CompanyCalendarRepository companyCalendarRepository;
     @Mock
     private NotificationService notificationService;
+    @Mock
+    private PaidLeaveService paidLeaveService;
 
     private ApplicationServiceImpl service;
 
@@ -67,7 +69,7 @@ class ApplicationServiceImplTest {
     void setUp() {
         service = new ApplicationServiceImpl(
                 applicationRepository, userRepository, timeRecordRepository,
-                companyCalendarRepository, notificationService);
+                companyCalendarRepository, notificationService, paidLeaveService);
         userId = UUID.randomUUID();
         approverId = UUID.randomUUID();
         departmentId = UUID.randomUUID();

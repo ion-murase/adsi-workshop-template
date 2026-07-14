@@ -2,14 +2,17 @@ package com.example.attendance.application.service;
 
 import com.example.attendance.application.dto.ApplicationResponse;
 import com.example.attendance.application.dto.ClockFixRequest;
+import com.example.attendance.application.dto.LeaveRequest;
 import com.example.attendance.application.entity.Application;
 import com.example.attendance.application.entity.ClockFixDetail;
+import com.example.attendance.application.entity.LeaveRequestDetail;
 import com.example.attendance.application.repository.ApplicationRepository;
 import com.example.attendance.clock.repository.CompanyCalendarRepository;
 import com.example.attendance.clock.repository.TimeRecordRepository;
 import com.example.attendance.clock.service.WorkTimeCalculator;
 import com.example.attendance.common.enums.ApplicationStatus;
 import com.example.attendance.common.enums.ApplicationType;
+import com.example.attendance.common.enums.LeaveType;
 import com.example.attendance.common.enums.NotificationType;
 import com.example.attendance.common.enums.Role;
 import com.example.attendance.common.exception.BusinessException;
@@ -36,17 +39,20 @@ public class ApplicationServiceImpl implements ApplicationService {
     private final TimeRecordRepository timeRecordRepository;
     private final CompanyCalendarRepository companyCalendarRepository;
     private final NotificationService notificationService;
+    private final PaidLeaveService paidLeaveService;
 
     public ApplicationServiceImpl(ApplicationRepository applicationRepository,
                                   UserRepository userRepository,
                                   TimeRecordRepository timeRecordRepository,
                                   CompanyCalendarRepository companyCalendarRepository,
-                                  NotificationService notificationService) {
+                                  NotificationService notificationService,
+                                  PaidLeaveService paidLeaveService) {
         this.applicationRepository = applicationRepository;
         this.userRepository = userRepository;
         this.timeRecordRepository = timeRecordRepository;
         this.companyCalendarRepository = companyCalendarRepository;
         this.notificationService = notificationService;
+        this.paidLeaveService = paidLeaveService;
     }
 
     @Override
@@ -71,6 +77,29 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     @Override
     @Transactional
+    public ApplicationResponse submitLeaveRequest(UUID userId, LeaveRequest request) {
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("ユーザが見つかりません", HttpStatus.NOT_FOUND));
+
+        var leaveType = LeaveType.valueOf(request.leaveType());
+
+        if (!paidLeaveService.canApply(userId, leaveType)) {
+            throw new BusinessException("有給残日数が不足しています", HttpStatus.BAD_REQUEST);
+        }
+
+        var application = new Application(userId, ApplicationType.LEAVE_REQUEST);
+        var detail = new LeaveRequestDetail(application, request.leaveDate(), leaveType);
+        application.setLeaveRequestDetail(detail);
+
+        applicationRepository.save(application);
+
+        notifyApprovers(user, application);
+
+        return ApplicationResponse.from(application, user.getName());
+    }
+
+    @Override
+    @Transactional
     public ApplicationResponse approve(UUID applicationId, UUID approverId) {
         var application = findApplication(applicationId);
         validatePending(application);
@@ -82,6 +111,8 @@ public class ApplicationServiceImpl implements ApplicationService {
 
         if (application.getType() == ApplicationType.CLOCK_FIX) {
             applyClockFix(application);
+        } else if (application.getType() == ApplicationType.LEAVE_REQUEST) {
+            applyLeaveRequest(application);
         }
 
         applicationRepository.save(application);
@@ -223,6 +254,13 @@ public class ApplicationServiceImpl implements ApplicationService {
         }
 
         timeRecordRepository.save(timeRecord);
+    }
+
+    private void applyLeaveRequest(Application application) {
+        var detail = application.getLeaveRequestDetail();
+        if (detail != null) {
+            paidLeaveService.consume(application.getApplicantId(), detail.getLeaveType());
+        }
     }
 
     private void notifyApprovers(User applicant, Application application) {
