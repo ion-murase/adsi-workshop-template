@@ -1,0 +1,7 @@
+CREATE TABLE sites (
+    id UUID PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    timezone VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL
+);
