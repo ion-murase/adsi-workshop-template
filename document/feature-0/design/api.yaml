@@ -1,0 +1,1470 @@
+openapi: 3.0.3
+info:
+  title: 勤怠管理アプリ API
+  version: 1.0.0
+  description: 勤怠管理アプリケーションのREST API定義
+
+servers:
+  - url: /api/v1
+
+tags:
+  - name: auth
+    description: 認証
+  - name: clock
+    description: 打刻
+  - name: time-records
+    description: 勤怠記録
+  - name: applications
+    description: 申請・承認
+  - name: paid-leave
+    description: 有給休暇
+  - name: notifications
+    description: 通知
+  - name: users
+    description: ユーザ管理
+  - name: departments
+    description: 部署管理
+  - name: sites
+    description: 拠点管理
+  - name: calendar
+    description: 会社カレンダー
+  - name: export
+    description: CSVエクスポート
+
+paths:
+  # ==================== 認証 ====================
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: ログイン
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: ログイン成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '423':
+          description: アカウントロック中
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: ログアウト
+      operationId: logout
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: ログアウト成功
+
+  /auth/password:
+    put:
+      tags: [auth]
+      summary: パスワード変更
+      operationId: changePassword
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '204':
+          description: 変更成功
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  # ==================== 打刻 ====================
+  /clock/in:
+    post:
+      tags: [clock]
+      summary: 出勤打刻
+      operationId: clockIn
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: 打刻成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeRecordResponse'
+        '409':
+          description: 既に出勤打刻済み
+
+  /clock/out:
+    post:
+      tags: [clock]
+      summary: 退勤打刻
+      operationId: clockOut
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 打刻成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeRecordResponse'
+        '409':
+          description: 出勤打刻なし
+
+  /clock/go-out:
+    post:
+      tags: [clock]
+      summary: 外出打刻
+      operationId: goOut
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: 打刻成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeEntryResponse'
+
+  /clock/return:
+    post:
+      tags: [clock]
+      summary: 戻り打刻
+      operationId: returnFromOut
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: 打刻成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeEntryResponse'
+
+  /clock/status:
+    get:
+      tags: [clock]
+      summary: 本日の打刻状態取得
+      operationId: getClockStatus
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClockStatusResponse'
+
+  # ==================== 勤怠記録 ====================
+  /time-records:
+    get:
+      tags: [time-records]
+      summary: 月次勤怠一覧取得
+      operationId: getTimeRecords
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+        - name: userId
+          in: query
+          description: 承認者/管理者が他ユーザを指定
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthlyTimeRecordsResponse'
+
+  /time-records/summary:
+    get:
+      tags: [time-records]
+      summary: 月次集計取得
+      operationId: getMonthSummary
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthlySummaryResponse'
+
+  # ==================== 申請 ====================
+  /applications/clock-fix:
+    post:
+      tags: [applications]
+      summary: 打刻修正申請
+      operationId: submitClockFix
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClockFixRequest'
+      responses:
+        '201':
+          description: 申請成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /applications/leave:
+    post:
+      tags: [applications]
+      summary: 有給休暇申請
+      operationId: submitLeaveRequest
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaveRequestBody'
+      responses:
+        '201':
+          description: 申請成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /applications:
+    get:
+      tags: [applications]
+      summary: 申請一覧取得
+      operationId: getApplications
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, APPROVED, REJECTED, WITHDRAWN]
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [CLOCK_FIX, LEAVE_REQUEST]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationListResponse'
+
+  /applications/pending:
+    get:
+      tags: [applications]
+      summary: 承認待ち申請一覧（承認者用）
+      operationId: getPendingApplications
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationListResponse'
+
+  /applications/{id}/approve:
+    post:
+      tags: [applications]
+      summary: 申請承認
+      operationId: approveApplication
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+      responses:
+        '200':
+          description: 承認成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+
+  /applications/{id}/reject:
+    post:
+      tags: [applications]
+      summary: 申請却下
+      operationId: rejectApplication
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectRequest'
+      responses:
+        '200':
+          description: 却下成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+
+  /applications/{id}/withdraw:
+    post:
+      tags: [applications]
+      summary: 申請取り下げ
+      operationId: withdrawApplication
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+      responses:
+        '200':
+          description: 取り下げ成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+
+  # ==================== 有給休暇 ====================
+  /paid-leave/balance:
+    get:
+      tags: [paid-leave]
+      summary: 有給残日数取得
+      operationId: getPaidLeaveBalance
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaidLeaveBalanceResponse'
+
+  # ==================== 通知 ====================
+  /notifications:
+    get:
+      tags: [notifications]
+      summary: 通知一覧取得
+      operationId: getNotifications
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationListResponse'
+
+  /notifications/unread-count:
+    get:
+      tags: [notifications]
+      summary: 未読通知件数取得
+      operationId: getUnreadCount
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnreadCountResponse'
+
+  /notifications/{id}/read:
+    post:
+      tags: [notifications]
+      summary: 通知既読化
+      operationId: markAsRead
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: 成功
+
+  /notifications/read-all:
+    post:
+      tags: [notifications]
+      summary: 全通知既読化
+      operationId: markAllAsRead
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: 成功
+
+  # ==================== ユーザ管理 ====================
+  /users:
+    get:
+      tags: [users]
+      summary: ユーザ一覧取得（管理者）
+      operationId: getUsers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: active
+          in: query
+          schema:
+            type: boolean
+        - name: departmentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+
+    post:
+      tags: [users]
+      summary: ユーザ登録（管理者）
+      operationId: createUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: 登録成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          description: メールアドレス重複
+
+  /users/{id}:
+    get:
+      tags: [users]
+      summary: ユーザ詳細取得
+      operationId: getUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [users]
+      summary: ユーザ更新（管理者）
+      operationId: updateUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+
+    delete:
+      tags: [users]
+      summary: ユーザ削除/無効化（管理者）
+      operationId: deleteUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '204':
+          description: 削除/無効化成功
+        '409':
+          description: 出退勤記録ありのため物理削除不可（無効化された）
+
+  /users/{id}/reset-password:
+    post:
+      tags: [users]
+      summary: 仮パスワード発行（管理者）
+      operationId: resetPassword
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: 発行成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemporaryPasswordResponse'
+
+  /users/me:
+    get:
+      tags: [users]
+      summary: 自分のプロフィール取得
+      operationId: getMyProfile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+
+  # ==================== 部署管理 ====================
+  /departments:
+    get:
+      tags: [departments]
+      summary: 部署一覧取得
+      operationId: getDepartments
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepartmentListResponse'
+
+    post:
+      tags: [departments]
+      summary: 部署作成（管理者）
+      operationId: createDepartment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDepartmentRequest'
+      responses:
+        '201':
+          description: 作成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepartmentResponse'
+
+  /departments/{id}:
+    put:
+      tags: [departments]
+      summary: 部署更新（管理者）
+      operationId: updateDepartment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDepartmentRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepartmentResponse'
+
+    delete:
+      tags: [departments]
+      summary: 部署削除（管理者）
+      operationId: deleteDepartment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: 削除成功
+        '409':
+          description: 所属ユーザあり削除不可
+
+  # ==================== 拠点管理 ====================
+  /sites:
+    get:
+      tags: [sites]
+      summary: 拠点一覧取得
+      operationId: getSites
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteListResponse'
+
+    post:
+      tags: [sites]
+      summary: 拠点作成（管理者）
+      operationId: createSite
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSiteRequest'
+      responses:
+        '201':
+          description: 作成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteResponse'
+
+  /sites/{id}:
+    put:
+      tags: [sites]
+      summary: 拠点更新（管理者）
+      operationId: updateSite
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSiteRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteResponse'
+
+  # ==================== 会社カレンダー ====================
+  /calendar/holidays:
+    get:
+      tags: [calendar]
+      summary: 年度の休日一覧取得
+      operationId: getHolidays
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HolidayListResponse'
+
+    post:
+      tags: [calendar]
+      summary: 休日登録（管理者）
+      operationId: createHoliday
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateHolidayRequest'
+      responses:
+        '201':
+          description: 登録成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HolidayResponse'
+
+  /calendar/holidays/{id}:
+    delete:
+      tags: [calendar]
+      summary: 休日削除（管理者）
+      operationId: deleteHoliday
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: 削除成功
+
+  # ==================== CSVエクスポート ====================
+  /export/time-records:
+    get:
+      tags: [export]
+      summary: 勤務履歴CSVエクスポート
+      operationId: exportTimeRecords
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: CSV ファイル
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+
+  /export/monthly-summary:
+    get:
+      tags: [export]
+      summary: 月別集計CSVエクスポート
+      operationId: exportMonthlySummary
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: CSV ファイル
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+
+  /export/users:
+    get:
+      tags: [export]
+      summary: ユーザ一覧CSVエクスポート（管理者）
+      operationId: exportUsers
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: CSV ファイル
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    ApplicationId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Unauthorized:
+      description: 認証エラー
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationError:
+      description: バリデーションエラー
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+    NotFound:
+      description: リソースが見つからない
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    # ===== 認証 =====
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        requirePasswordChange:
+          type: boolean
+        user:
+          $ref: '#/components/schemas/UserResponse'
+
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
+
+    # ===== 打刻 =====
+    ClockStatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [NOT_CLOCKED_IN, CLOCKED_IN, ON_BREAK, CLOCKED_OUT]
+        todayRecord:
+          $ref: '#/components/schemas/TimeRecordResponse'
+
+    TimeRecordResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workDate:
+          type: string
+          format: date
+        clockIn:
+          type: string
+          format: date-time
+        clockOut:
+          type: string
+          format: date-time
+        breakMinutes:
+          type: integer
+        workMinutes:
+          type: integer
+        overtimeMinutes:
+          type: integer
+        nightMinutes:
+          type: integer
+        holidayWorkMinutes:
+          type: integer
+        isHoliday:
+          type: boolean
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeEntryResponse'
+
+    TimeEntryResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [GO_OUT, RETURN]
+        timestamp:
+          type: string
+          format: date-time
+
+    MonthlyTimeRecordsResponse:
+      type: object
+      properties:
+        year:
+          type: integer
+        month:
+          type: integer
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeRecordResponse'
+        summary:
+          $ref: '#/components/schemas/MonthlySummaryResponse'
+
+    MonthlySummaryResponse:
+      type: object
+      properties:
+        workDays:
+          type: integer
+        totalWorkMinutes:
+          type: integer
+        totalOvertimeMinutes:
+          type: integer
+        totalNightMinutes:
+          type: integer
+        totalHolidayWorkMinutes:
+          type: integer
+
+    # ===== 申請 =====
+    ClockFixRequest:
+      type: object
+      required: [targetDate, reason]
+      properties:
+        targetDate:
+          type: string
+          format: date
+        correctedClockIn:
+          type: string
+          format: date-time
+        correctedClockOut:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          minLength: 1
+
+    LeaveRequestBody:
+      type: object
+      required: [leaveDate, leaveType]
+      properties:
+        leaveDate:
+          type: string
+          format: date
+        leaveType:
+          type: string
+          enum: [FULL_DAY, HALF_AM, HALF_PM]
+
+    RejectRequest:
+      type: object
+      required: [comment]
+      properties:
+        comment:
+          type: string
+          minLength: 1
+
+    ApplicationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        applicantId:
+          type: string
+          format: uuid
+        applicantName:
+          type: string
+        type:
+          type: string
+          enum: [CLOCK_FIX, LEAVE_REQUEST]
+        status:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED, WITHDRAWN]
+        rejectionComment:
+          type: string
+        appliedAt:
+          type: string
+          format: date-time
+        decidedAt:
+          type: string
+          format: date-time
+        clockFixDetail:
+          $ref: '#/components/schemas/ClockFixDetailResponse'
+        leaveRequestDetail:
+          $ref: '#/components/schemas/LeaveRequestDetailResponse'
+
+    ClockFixDetailResponse:
+      type: object
+      properties:
+        targetDate:
+          type: string
+          format: date
+        correctedClockIn:
+          type: string
+          format: date-time
+        correctedClockOut:
+          type: string
+          format: date-time
+        reason:
+          type: string
+
+    LeaveRequestDetailResponse:
+      type: object
+      properties:
+        leaveDate:
+          type: string
+          format: date
+        leaveType:
+          type: string
+          enum: [FULL_DAY, HALF_AM, HALF_PM]
+
+    ApplicationListResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationResponse'
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        page:
+          type: integer
+        size:
+          type: integer
+
+    # ===== 有給 =====
+    PaidLeaveBalanceResponse:
+      type: object
+      properties:
+        fiscalYear:
+          type: integer
+        grantedDays:
+          type: number
+        usedDays:
+          type: number
+        carriedOverDays:
+          type: number
+        remainingDays:
+          type: number
+
+    # ===== 通知 =====
+    NotificationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        referenceId:
+          type: string
+          format: uuid
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    NotificationListResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationResponse'
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        page:
+          type: integer
+        size:
+          type: integer
+
+    UnreadCountResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+
+    # ===== ユーザ =====
+    CreateUserRequest:
+      type: object
+      required: [email, name, role, primaryDepartmentId, departmentIds]
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, APPROVER, GENERAL]
+        primaryDepartmentId:
+          type: string
+          format: uuid
+        departmentIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, APPROVER, GENERAL]
+        primaryDepartmentId:
+          type: string
+          format: uuid
+        departmentIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        active:
+          type: boolean
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, APPROVER, GENERAL]
+        primaryDepartment:
+          $ref: '#/components/schemas/DepartmentResponse'
+        departments:
+          type: array
+          items:
+            $ref: '#/components/schemas/DepartmentResponse'
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    UserListResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserResponse'
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        page:
+          type: integer
+        size:
+          type: integer
+
+    TemporaryPasswordResponse:
+      type: object
+      properties:
+        temporaryPassword:
+          type: string
+
+    # ===== 部署 =====
+    CreateDepartmentRequest:
+      type: object
+      required: [name, siteId]
+      properties:
+        name:
+          type: string
+        siteId:
+          type: string
+          format: uuid
+
+    UpdateDepartmentRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        siteId:
+          type: string
+          format: uuid
+
+    DepartmentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        site:
+          $ref: '#/components/schemas/SiteResponse'
+
+    DepartmentListResponse:
+      type: object
+      properties:
+        departments:
+          type: array
+          items:
+            $ref: '#/components/schemas/DepartmentResponse'
+
+    # ===== 拠点 =====
+    CreateSiteRequest:
+      type: object
+      required: [name, timezone]
+      properties:
+        name:
+          type: string
+        timezone:
+          type: string
+
+    UpdateSiteRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        timezone:
+          type: string
+
+    SiteResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        timezone:
+          type: string
+
+    SiteListResponse:
+      type: object
+      properties:
+        sites:
+          type: array
+          items:
+            $ref: '#/components/schemas/SiteResponse'
+
+    # ===== カレンダー =====
+    CreateHolidayRequest:
+      type: object
+      required: [date, holidayName]
+      properties:
+        date:
+          type: string
+          format: date
+        holidayName:
+          type: string
+
+    HolidayResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        holidayName:
+          type: string
+
+    HolidayListResponse:
+      type: object
+      properties:
+        holidays:
+          type: array
+          items:
+            $ref: '#/components/schemas/HolidayResponse'
+
+    # ===== エラー =====
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
