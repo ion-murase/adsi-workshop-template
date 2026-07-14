@@ -2,10 +2,12 @@ import http from 'node:http';
 
 const LISTEN_PORT = 3000;
 const TARGET_PORT = 3001;
-const PREFIX = '/codeeditor/default';
+const RESTORE_PREFIX = '/codeeditor/default';
 
 const server = http.createServer((req, res) => {
-  const url = PREFIX + req.url;
+  // code-server(8888) strips "/codeeditor/default" and forwards "/absports/3000/..."
+  // Restore the prefix so Next.js (basePath=/codeeditor/default/absports/3000) can match
+  const url = RESTORE_PREFIX + req.url;
 
   const options = {
     hostname: '127.0.0.1',
@@ -30,5 +32,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(LISTEN_PORT, '0.0.0.0', () => {
-  console.log(`SageMaker proxy listening on :${LISTEN_PORT} -> :${TARGET_PORT} (prefix: ${PREFIX})`);
+  console.log(`SageMaker proxy listening on :${LISTEN_PORT} -> :${TARGET_PORT} (restore prefix: ${RESTORE_PREFIX})`);
 });
