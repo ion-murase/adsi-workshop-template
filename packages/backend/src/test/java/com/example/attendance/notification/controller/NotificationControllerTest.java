@@ -4,9 +4,12 @@ import com.example.attendance.common.enums.NotificationType;
 import com.example.attendance.common.exception.BusinessException;
 import com.example.attendance.config.SecurityConfig;
 import com.example.attendance.infrastructure.security.JwtAuthFilter;
+import com.example.attendance.infrastructure.security.JwtTokenProvider;
 import com.example.attendance.notification.dto.NotificationResponse;
 import com.example.attendance.notification.dto.UnreadCountResponse;
 import com.example.attendance.notification.service.NotificationService;
+import io.jsonwebtoken.Claims;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +30,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -49,8 +53,19 @@ class NotificationControllerTest {
     @MockitoBean
     private NotificationService notificationService;
 
+    @MockitoBean
+    private JwtTokenProvider jwtTokenProvider;
+
     private static final UUID USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000010");
     private static final UUID NOTIFICATION_ID = UUID.fromString("00000000-0000-0000-0000-000000000101");
+    private static final String AUTH_HEADER = "Bearer test-token";
+
+    @BeforeEach
+    void setUp() {
+        var claims = mock(Claims.class);
+        when(claims.getSubject()).thenReturn(USER_ID.toString());
+        when(jwtTokenProvider.parseToken("test-token")).thenReturn(claims);
+    }
 
     @Test
     @DisplayName("GET /api/notifications: 通知一覧を返す")
@@ -69,7 +84,7 @@ class NotificationControllerTest {
                 .thenReturn(page);
 
         mockMvc.perform(get("/api/notifications")
-                        .param("userId", USER_ID.toString()))
+                        .header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].title").value("承認されました"))
                 .andExpect(jsonPath("$.totalElements").value(1));
@@ -82,7 +97,7 @@ class NotificationControllerTest {
                 .thenReturn(new UnreadCountResponse(3));
 
         mockMvc.perform(get("/api/notifications/unread-count")
-                        .param("userId", USER_ID.toString()))
+                        .header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.count").value(3));
     }
@@ -91,7 +106,7 @@ class NotificationControllerTest {
     @DisplayName("POST /api/notifications/{id}/read: 既読化する")
     void markAsRead_returns200() throws Exception {
         mockMvc.perform(post("/api/notifications/" + NOTIFICATION_ID + "/read")
-                        .param("userId", USER_ID.toString()))
+                        .header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk());
 
         verify(notificationService).markAsRead(eq(NOTIFICATION_ID), eq(USER_ID));
@@ -101,7 +116,7 @@ class NotificationControllerTest {
     @DisplayName("POST /api/notifications/read-all: 全既読化する")
     void markAllAsRead_returns200() throws Exception {
         mockMvc.perform(post("/api/notifications/read-all")
-                        .param("userId", USER_ID.toString()))
+                        .header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk());
 
         verify(notificationService).markAllAsRead(eq(USER_ID));
@@ -116,7 +131,7 @@ class NotificationControllerTest {
                 .when(notificationService).markAsRead(eq(unknownId), eq(USER_ID));
 
         mockMvc.perform(post("/api/notifications/" + unknownId + "/read")
-                        .param("userId", USER_ID.toString()))
+                        .header("Authorization", AUTH_HEADER))
                 .andExpect(status().isBadRequest());
     }
 }

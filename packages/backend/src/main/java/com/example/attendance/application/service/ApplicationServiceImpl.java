@@ -110,6 +110,7 @@ public class ApplicationServiceImpl implements ApplicationService {
         var approver = userRepository.findById(approverId)
                 .orElseThrow(() -> new BusinessException("承認者が見つかりません", HttpStatus.NOT_FOUND));
         validateApproverRole(approver);
+        validateApprovalScope(application, approverId, approver);
 
         application.approve(approverId);
 
@@ -139,6 +140,7 @@ public class ApplicationServiceImpl implements ApplicationService {
         var approver = userRepository.findById(approverId)
                 .orElseThrow(() -> new BusinessException("承認者が見つかりません", HttpStatus.NOT_FOUND));
         validateApproverRole(approver);
+        validateApprovalScope(application, approverId, approver);
 
         application.reject(approverId, comment);
         applicationRepository.save(application);
@@ -191,6 +193,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     public Page<ApplicationResponse> getPendingApplications(UUID approverId, Pageable pageable) {
         var approver = userRepository.findById(approverId)
                 .orElseThrow(() -> new BusinessException("承認者が見つかりません", HttpStatus.NOT_FOUND));
+        validateApproverRole(approver);
 
         var page = applicationRepository.findPendingByDepartment(approver.getPrimaryDepartmentId(), pageable);
 
@@ -294,6 +297,20 @@ public class ApplicationServiceImpl implements ApplicationService {
     private void validateApproverRole(User user) {
         if (user.getRole() != Role.APPROVER && user.getRole() != Role.ADMIN) {
             throw new BusinessException("承認権限がありません", HttpStatus.FORBIDDEN);
+        }
+    }
+
+    private void validateApprovalScope(Application application, UUID approverId, User approver) {
+        if (approverId.equals(application.getApplicantId())) {
+            throw new BusinessException("自分自身の申請は承認・却下できません", HttpStatus.FORBIDDEN);
+        }
+
+        if (approver.getRole() == Role.APPROVER) {
+            var applicant = userRepository.findById(application.getApplicantId())
+                    .orElseThrow(() -> new BusinessException("申請者が見つかりません", HttpStatus.NOT_FOUND));
+            if (!approver.getPrimaryDepartmentId().equals(applicant.getPrimaryDepartmentId())) {
+                throw new BusinessException("他部署の申請は承認・却下できません", HttpStatus.FORBIDDEN);
+            }
         }
     }
 

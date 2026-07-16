@@ -9,35 +9,28 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
-
   const fetchNotifications = useCallback(async () => {
-    if (!userId) return;
     try {
-      const data = await apiClient<NotificationPageResponse>(
-        `/notifications?userId=${userId}&size=50`
-      );
+      const data = await apiClient<NotificationPageResponse>('/notifications?size=50');
       setNotifications(data.content);
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, []);
 
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);
 
   const handleMarkAsRead = async (id: string) => {
-    if (!userId) return;
-    await apiClient(`/notifications/${id}/read?userId=${userId}`, { method: 'POST' });
+    await apiClient(`/notifications/${id}/read`, { method: 'POST' });
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
     );
   };
 
   const handleMarkAllAsRead = async () => {
-    if (!userId) return;
-    await apiClient(`/notifications/read-all?userId=${userId}`, { method: 'POST' });
+    await apiClient('/notifications/read-all', { method: 'POST' });
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   };
 

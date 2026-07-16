@@ -162,6 +162,77 @@ class ApplicationServiceImplTest {
     }
 
     @Test
+    @DisplayName("承認: 自分自身の申請は自己承認できない")
+    void approve_selfApplication_throwsBusinessException() {
+        var application = new Application(approverId, ApplicationType.CLOCK_FIX);
+        var detail = new ClockFixDetail(application, LocalDate.now().minusDays(1),
+                ZonedDateTime.now(TOKYO).withHour(9).withMinute(0),
+                ZonedDateTime.now(TOKYO).withHour(18).withMinute(0),
+                "理由");
+        application.setClockFixDetail(detail);
+
+        var approverUser = createUser(approverId, Role.APPROVER, departmentId);
+
+        when(applicationRepository.findById(application.getId())).thenReturn(Optional.of(application));
+        when(userRepository.findById(approverId)).thenReturn(Optional.of(approverUser));
+
+        assertThatThrownBy(() -> service.approve(application.getId(), approverId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("自分自身の申請");
+    }
+
+    @Test
+    @DisplayName("承認: 他部署の承認者(APPROVER)は承認できない")
+    void approve_differentDepartmentApprover_throwsBusinessException() {
+        var otherDepartmentId = UUID.randomUUID();
+        var application = new Application(userId, ApplicationType.CLOCK_FIX);
+        var detail = new ClockFixDetail(application, LocalDate.now().minusDays(1),
+                ZonedDateTime.now(TOKYO).withHour(9).withMinute(0),
+                ZonedDateTime.now(TOKYO).withHour(18).withMinute(0),
+                "理由");
+        application.setClockFixDetail(detail);
+
+        var approverUser = createUser(approverId, Role.APPROVER, otherDepartmentId);
+        var applicantUser = createUser(userId, Role.GENERAL, departmentId);
+
+        when(applicationRepository.findById(application.getId())).thenReturn(Optional.of(application));
+        when(userRepository.findById(approverId)).thenReturn(Optional.of(approverUser));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(applicantUser));
+
+        assertThatThrownBy(() -> service.approve(application.getId(), approverId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("他部署");
+    }
+
+    @Test
+    @DisplayName("承認: ADMINは部署が異なっても承認できる")
+    void approve_adminDifferentDepartment_statusBecomesApproved() {
+        var otherDepartmentId = UUID.randomUUID();
+        var application = new Application(userId, ApplicationType.CLOCK_FIX);
+        var detail = new ClockFixDetail(application, LocalDate.now().minusDays(1),
+                ZonedDateTime.now(TOKYO).withHour(9).withMinute(0),
+                ZonedDateTime.now(TOKYO).withHour(18).withMinute(0),
+                "理由");
+        application.setClockFixDetail(detail);
+
+        var adminUser = createUser(approverId, Role.ADMIN, otherDepartmentId);
+        var applicantUser = createUser(userId, Role.GENERAL, departmentId);
+        var timeRecord = new TimeRecord();
+
+        when(applicationRepository.findById(application.getId())).thenReturn(Optional.of(application));
+        when(userRepository.findById(approverId)).thenReturn(Optional.of(adminUser));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(applicantUser));
+        when(timeRecordRepository.findByUserIdAndWorkDate(userId, detail.getTargetDate()))
+                .thenReturn(Optional.of(timeRecord));
+        when(timeRecordRepository.save(any())).thenReturn(timeRecord);
+        when(applicationRepository.save(any(Application.class))).thenAnswer(i -> i.getArgument(0));
+
+        var result = service.approve(application.getId(), approverId);
+
+        assertThat(result.status()).isEqualTo(ApplicationStatus.APPROVED);
+    }
+
+    @Test
     @DisplayName("却下: PENDING の申請を却下すると REJECTED になる")
     void reject_pendingApplication_statusBecomesRejected() {
         var application = new Application(userId, ApplicationType.CLOCK_FIX);
@@ -246,5 +317,17 @@ class ApplicationServiceImplTest {
         var result = service.getMyApplications(userId, null, PageRequest.of(0, 20));
 
         assertThat(result.getContent()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("承認待ち一覧: 承認権限のないGENERALユーザは取得できない")
+    void getPendingApplications_generalRole_throwsBusinessException() {
+        var generalUser = createUser(userId, Role.GENERAL, departmentId);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(generalUser));
+
+        assertThatThrownBy(() -> service.getPendingApplications(userId, PageRequest.of(0, 20)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("承認権限");
     }
 }

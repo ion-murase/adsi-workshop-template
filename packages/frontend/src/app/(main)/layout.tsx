@@ -32,11 +32,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     }
     setIsAuthenticated(true);
 
-    const userId = localStorage.getItem('userId');
-    if (!userId) return;
-
     const fetchCount = () => {
-      apiClient<UnreadCountResponse>(`/notifications/unread-count?userId=${userId}`)
+      apiClient<UnreadCountResponse>('/notifications/unread-count')
         .then((data) => setUnreadCount(data.count))
         .catch(() => {});
     };
