@@ -1,5 +1,6 @@
 # Backend
 packages/backend/build/
+packages/backend/bin/
 packages/backend/.gradle/
 packages/backend/gradle/
 packages/backend/gradlew
