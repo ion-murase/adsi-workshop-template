@@ -1,6 +1,5 @@
 package com.example.attendance.application.service;
 
-import com.example.attendance.clock.entity.TimeRecord;
 import com.example.attendance.clock.repository.TimeRecordRepository;
 import com.example.attendance.common.enums.NotificationType;
 import com.example.attendance.common.enums.Role;
@@ -12,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.YearMonth;
-import java.util.List;
 import java.util.UUID;
 
 @Service

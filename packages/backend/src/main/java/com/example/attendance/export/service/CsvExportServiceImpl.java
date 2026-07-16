@@ -1,6 +1,5 @@
 package com.example.attendance.export.service;
 
-import com.example.attendance.clock.entity.TimeRecord;
 import com.example.attendance.clock.repository.TimeRecordRepository;
 import com.example.attendance.common.enums.Role;
 import com.example.attendance.common.exception.BusinessException;
@@ -11,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;

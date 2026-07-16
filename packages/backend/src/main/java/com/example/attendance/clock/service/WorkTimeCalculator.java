@@ -6,7 +6,6 @@ import java.time.temporal.ChronoUnit;
 public final class WorkTimeCalculator {
 
     private static final int STANDARD_WORK_MINUTES = 450;
-    private static final int HALF_DAY_WORK_MINUTES = 225;
     private static final int NIGHT_START_HOUR = 22;
     private static final int NIGHT_END_HOUR = 5;
 

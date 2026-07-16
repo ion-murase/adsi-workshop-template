@@ -1,6 +1,5 @@
 package com.example.attendance.notification.repository;
 
-import com.example.attendance.notification.entity.Notification;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
