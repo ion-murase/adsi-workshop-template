@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:attendance;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+app:
+  jwt:
+    secret: workshop-dev-secret-key-for-local-h2-only-do-not-use-in-production
+    expiration-ms: 28800000
